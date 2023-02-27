@@ -624,7 +624,9 @@ def generate_data(dataset, key):
     if dataset in custom_datasets.DATASETS:
         data = custom_datasets.load(dataset, cache_dir)
     else:
+        print("here")
         data = datasets.load_dataset(dataset, split='train', cache_dir=cache_dir)[key]
+        print("done")
 
     # get unique examples, strip whitespace, and remove newlines
     # then take just the long examples, shuffle, take the first 5,000 to tokenize to save time
