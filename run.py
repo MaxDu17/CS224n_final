@@ -69,7 +69,7 @@ def tokenize_and_mask(text, span_length, pct, ceil_pct=False):
         if mask_string not in tokens[search_start:search_end]:
             tokens[start:end] = [mask_string]
             n_masks += 1
-    
+
     # replace each occurrence of mask_string with <extra_id_NUM>, where NUM increments
     num_filled = 0
     for idx, token in enumerate(tokens):
@@ -199,7 +199,7 @@ def _openai_sample(p):
     kwargs = { "engine": args.openai_model, "max_tokens": 200 }
     if args.do_top_p:
         kwargs['top_p'] = args.top_p
-    
+
     r = openai.Completion.create(prompt=f"{p}", **kwargs)
     return p + r['choices'][0].text
 
@@ -264,7 +264,7 @@ def get_likelihood(logits, labels):
 
 # Get the log likelihood of each text under the base_model
 def get_ll(text):
-    if args.openai_model:        
+    if args.openai_model:
         kwargs = { "engine": args.openai_model, "temperature": 0, "max_tokens": 0, "echo": True, "logprobs": 0}
         r = openai.Completion.create(prompt=f"<|endoftext|>{text}", **kwargs)
         result = r['choices'][0]
@@ -406,7 +406,7 @@ def save_llr_histograms(experiments):
             for r in results:
                 r["sampled_llr"] = r["sampled_ll"] - r["perturbed_sampled_ll"]
                 r["original_llr"] = r["original_ll"] - r["perturbed_original_ll"]
-            
+
             plt.hist([r["sampled_llr"] for r in results], alpha=0.5, bins='auto', label='sampled')
             plt.hist([r["original_llr"] for r in results], alpha=0.5, bins='auto', label='original')
             plt.xlabel("log likelihood ratio")
@@ -416,7 +416,7 @@ def save_llr_histograms(experiments):
         except:
             pass
 
-
+## KEY FUNCTION
 def get_perturbation_results(span_length=10, n_perturbations=1, n_samples=500):
     load_mask_model()
 
@@ -609,7 +609,7 @@ def generate_samples(raw_data, batch_size):
             # add to the data
             data["original"].append(o)
             data["sampled"].append(s)
-    
+
     if args.pre_perturb_pct > 0:
         print(f'APPLYING {args.pre_perturb_pct}, {args.pre_perturb_span_length} PRE-PERTURBATIONS')
         load_mask_model()
@@ -701,7 +701,7 @@ def eval_supervised(data, model):
             batch_real = real[batch * batch_size:(batch + 1) * batch_size]
             batch_real = tokenizer(batch_real, padding=True, truncation=True, max_length=512, return_tensors="pt").to(DEVICE)
             real_preds.extend(detector(**batch_real).logits.softmax(-1)[:,0].tolist())
-        
+
         # get predictions for fake
         fake_preds = []
         for batch in tqdm.tqdm(range(len(fake) // batch_size), desc="Evaluating fake"):
@@ -915,11 +915,11 @@ if __name__ == '__main__':
             # write entropy threshold results to a file
             with open(os.path.join(SAVE_FOLDER, f"entropy_threshold_results.json"), "w") as f:
                 json.dump(baseline_outputs[3], f)
-        
+
         # write supervised results to a file
         with open(os.path.join(SAVE_FOLDER, f"roberta-base-openai-detector_results.json"), "w") as f:
             json.dump(baseline_outputs[-2], f)
-        
+
         # write supervised results to a file
         with open(os.path.join(SAVE_FOLDER, f"roberta-large-openai-detector_results.json"), "w") as f:
             json.dump(baseline_outputs[-1], f)
