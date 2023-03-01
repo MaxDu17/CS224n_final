@@ -25,6 +25,9 @@ from utils import get_roc_metrics, get_precision_recall_metrics
 # define regex to match all <extra_id_*> tokens, where * is an integer
 pattern = re.compile(r"<extra_id_\d+>")
 
+# for enrichment
+import stanza
+nlp = stanza.Pipeline(lang='en', processors='tokenize,mwt,pos')
 
 def move_base_model_to_gpu():
     print('MOVING BASE MODEL TO GPU...', end='', flush=True)
@@ -49,6 +52,9 @@ def move_mask_model_to_gpu():
     print(f'DONE ({time.time() - start:.2f}s)')
 
 #KEY
+
+
+
 def tokenize_and_mask(text, span_length, pct, ceil_pct=False, concentration = None):
     """
     Takes raw text and applies random masking for perturbations
@@ -58,24 +64,37 @@ def tokenize_and_mask(text, span_length, pct, ceil_pct=False, concentration = No
     :param ceil_pct:
     :return: masked text
     """
-    #TODO: make this better structured 
+    #TODO: make this better structured
 
 
     tokens = text.split(' ')
 
-    if concentration == "adj":
-        from nltk.corpus import wordnet as wn
+    if concentration is not None: # == "adj":
+        doc = nlp(text)
+        relevant_words = set([word.text for sent in doc.sentences for word in sent.words if word.upos == concentration])
+        selected_list = list()
+        for i, token in enumerate(tokens):
+            for relevant in relevant_words:
+                if relevant in token:
+                    selected_list.append(i)
+                    # print(token)
+                    break
+        # import ipdb
+        # ipdb.set_trace()
 
-        adj_list = []
-        tokens = tokens[:-span_length] #chopping off the end to prevent over-sampling
-        for i, w in enumerate(tokens):
-            # tmp = wn.synsets(w)[0].pos()
-            pos_l = set()
-            for tmp in wn.synsets(w):
-                if tmp.name().split('.')[0] == w:
-                    pos_l.add(tmp.pos())
-            if "a" in pos_l or "s" in pos_l:
-                adj_list.append(i)
+        #
+        # from nltk.corpus import wordnet as wn
+        #
+        # adj_list = []
+        # tokens = tokens[:-span_length] #chopping off the end to prevent over-sampling
+        # for i, w in enumerate(tokens):
+        #     # tmp = wn.synsets(w)[0].pos()
+        #     pos_l = set()
+        #     for tmp in wn.synsets(w):
+        #         if tmp.name().split('.')[0] == w:
+        #             pos_l.add(tmp.pos())
+        #     if "a" in pos_l or "s" in pos_l:
+        #         adj_list.append(i)
         # print(w, ":", pos_l)
 
 
@@ -84,11 +103,11 @@ def tokenize_and_mask(text, span_length, pct, ceil_pct=False, concentration = No
     n_spans = pct * len(tokens) / (span_length + args.buffer_size * 2)
 
     ### ADDED, prevent no selection
-    if concentration == "adj":
-        while len(adj_list) < n_spans:
+    if concentration is not None:
+        while len(selected_list) < n_spans: # just making sure that we have other words we want to select too
             x = np.random.randint(0, len(tokens) - span_length)
-            if x not in adj_list:
-                adj_list.append(x)
+            if x not in selected_list:
+                selected_list.append(x)
 
 
     if ceil_pct:
@@ -98,8 +117,9 @@ def tokenize_and_mask(text, span_length, pct, ceil_pct=False, concentration = No
     n_masks = 0
     while n_masks < n_spans:
         # used to be below
-        if concentration == "adj":
-            start = np.random.choice(adj_list)
+        if concentration is not None:
+            print("SELECT")
+            start = np.random.choice(selected_list)
         else:
             start = np.random.randint(0, len(tokens) - span_length) #this is where we look for figures of speech
 
