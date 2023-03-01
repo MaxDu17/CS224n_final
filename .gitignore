@@ -3,4 +3,7 @@ results/
 tmp_results/
 cache/
 clusterlogs/
-
+*.pyc
+__pycache__/
+.vscode/
+.idea/
