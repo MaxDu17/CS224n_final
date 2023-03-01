@@ -1,1 +1,6 @@
 .cache/
+results/
+tmp_results/
+cache/
+clusterlogs/
+
