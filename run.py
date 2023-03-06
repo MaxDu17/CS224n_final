@@ -69,9 +69,14 @@ def tokenize_and_mask(text, span_length, pct, ceil_pct=False, concentration = No
 
     tokens = text.split(' ')
 
-    if concentration is not None: # == "adj":
+    if concentration is not None:
+
         doc = nlp(text)
-        relevant_words = set([word.text for sent in doc.sentences for word in sent.words if word.upos == concentration])
+        if concentration == "ALL":
+            relevant_words = set(
+                [word.text for sent in doc.sentences for word in sent.words if word.upos in ["ADJ", "NOUN", "VERB"]])
+        else:
+            relevant_words = set([word.text for sent in doc.sentences for word in sent.words if word.upos == concentration])
         selected_list = list()
         for i, token in enumerate(tokens):
             for relevant in relevant_words:
@@ -109,16 +114,19 @@ def tokenize_and_mask(text, span_length, pct, ceil_pct=False, concentration = No
             if x not in selected_list:
                 selected_list.append(x)
 
-
     if ceil_pct:
         n_spans = np.ceil(n_spans)
     n_spans = int(n_spans)
 
     n_masks = 0
+    count = 0
+
     while n_masks < n_spans:
+        # print(n_masks, n_spans)
+        count += 1
         # used to be below
-        if concentration is not None:
-            print("SELECT")
+        if concentration is not None and count < 100:
+            # print("SELECT")
             start = np.random.choice(selected_list)
         else:
             start = np.random.randint(0, len(tokens) - span_length) #this is where we look for figures of speech
@@ -129,7 +137,11 @@ def tokenize_and_mask(text, span_length, pct, ceil_pct=False, concentration = No
         if mask_string not in tokens[search_start:search_end]:
             tokens[start:end] = [mask_string]
             n_masks += 1
+        if count > 100:
+            print("exceeded tries! Picking randomly")
+            # start = np.random.randint(0, len(tokens) - span_length)  # this is where we look for figures of speech
 
+    # print('after while')
     # replace each occurrence of mask_string with <extra_id_NUM>, where NUM increments
     num_filled = 0
     for idx, token in enumerate(tokens):
@@ -138,6 +150,7 @@ def tokenize_and_mask(text, span_length, pct, ceil_pct=False, concentration = No
             num_filled += 1
     assert num_filled == n_masks, f"num_filled {num_filled} != n_masks {n_masks}"
     text = ' '.join(tokens)
+    # print("done", time.time())
     return text
 
 
@@ -211,10 +224,16 @@ def perturb_texts_(texts, span_length, pct, ceil_pct=False):
     :return: perturbed texts
     """
     if not args.random_fills:
+        # print("HERE HERE HERE")
+
         masked_texts = [tokenize_and_mask(x, span_length, pct, ceil_pct, args.concentration) for x in texts]
+        # print("a")
         raw_fills = replace_masks(masked_texts)
+        # print("b")
         extracted_fills = extract_fills(raw_fills)
+        # print("c")
         perturbed_texts = apply_extracted_fills(masked_texts, extracted_fills)
+        # print("d")
 
         # Handle the fact that sometimes the model doesn't generate the right number of fills and we have to try again
         attempts = 1
@@ -647,7 +666,6 @@ if __name__ == '__main__':
     parser.add_argument('--concentration', type=str, default=None, help = "How we pick the words to perturb. None is default")
     args = parser.parse_args()
     API_TOKEN_COUNTER = 0
-
     if args.openai_model is not None:
         import openai
 
@@ -667,7 +685,9 @@ if __name__ == '__main__':
     else:
         base_model_name = "openai-" + args.openai_model.replace('/', '_')
     scoring_model_string = (f"-{args.scoring_model_name}" if args.scoring_model_name else "").replace('/', '_')
-    SAVE_FOLDER = f"tmp_results/{output_subfolder}{base_model_name}{scoring_model_string}-{args.mask_filling_model_name}-{sampling_string}/{START_DATE}-{START_TIME}-{precision_string}-{args.pct_words_masked}-{args.n_perturbation_rounds}-{args.dataset}-{args.n_samples}"
+    SAVE_FOLDER = f"tmp_results/{output_subfolder}{base_model_name}{scoring_model_string}-{args.mask_filling_model_name}-" \
+                  f"{sampling_string}/{START_DATE}-{START_TIME}-{precision_string}-{args.pct_words_masked}-" \
+                  f"{args.n_perturbation_rounds}-{args.dataset}-{args.n_samples}-{args.span_length}"
     if not os.path.exists(SAVE_FOLDER):
         os.makedirs(SAVE_FOLDER)
     print(f"Saving results to absolute path: {os.path.abspath(SAVE_FOLDER)}")
