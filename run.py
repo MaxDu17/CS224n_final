@@ -68,9 +68,27 @@ def tokenize_and_mask(text, span_length, pct, ceil_pct=False, concentration = No
 
 
     tokens = text.split(' ')
+    if concentration == "FREQ":
+        from nltk.corpus import stopwords
 
-    if concentration is not None:
+        stop_words = set(stopwords.words('english'))
+        tokens = text.lower().split()
+        idx = {}
+        for i, token in enumerate(tokens):
+            if token not in stop_words:
+                if token in idx:
+                    idx[token].append(i)
+                else:
+                    idx[token] = [i]
 
+        idx = {token:idx[token] for token in idx if len(idx[token])>1}
+        sorted_tokens = sorted(idx, key=lambda token:len(idx[token]), reverse=True)
+
+        selected_list = []
+        for token in sorted_tokens:
+            selected_list.extend(np.random.choice(idx[token], size=len(idx[token])//2, replace=False))
+
+    elif concentration is not None: # == "adj":
         doc = nlp(text)
         if concentration == "ALL":
             relevant_words = set(
@@ -126,7 +144,6 @@ def tokenize_and_mask(text, span_length, pct, ceil_pct=False, concentration = No
         count += 1
         # used to be below
         if concentration is not None and count < 100:
-            # print("SELECT")
             start = np.random.choice(selected_list)
         else:
             start = np.random.randint(0, len(tokens) - span_length) #this is where we look for figures of speech
