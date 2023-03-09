@@ -53,7 +53,13 @@ def sample_from_model(texts, base_model, base_tokenizer, args, min_words=55, pro
         all_encoded = base_tokenizer(texts, return_tensors="pt", padding=True).to(DEVICE)
     else:
         all_encoded = base_tokenizer(texts, return_tensors="pt", padding=True).to(DEVICE)
-        all_encoded = {key: value[:, :prompt_tokens] for key, value in all_encoded.items()}
+        if len(args.prompt) > 0:
+            addl_prompt = base_tokenizer(args.prompt, return_tensors="pt", padding=True).to(DEVICE)
+            batch_size = len(texts)
+            stacked_prompt = {key : torch.tile(value, (batch_size, 1)) for key, value in addl_prompt.items()}
+            all_encoded = {key: torch.cat((stacked_prompt[key],value[:, :prompt_tokens]), dim = 1) for key, value in all_encoded.items()}
+        else:
+            all_encoded = {key: value[:, :prompt_tokens] for key, value in all_encoded.items()}
 
     if args.openai_model:
         # decode the prefixes back into text
@@ -88,5 +94,6 @@ def sample_from_model(texts, base_model, base_tokenizer, args, min_words=55, pro
         # count total number of tokens with GPT2_TOKENIZER
         total_tokens = sum(len(GPT2_TOKENIZER.encode(x)) for x in decoded)
         API_TOKEN_COUNTER += total_tokens
-
+    if len(args.prompt) > 0: #strip prompt
+        decoded = [x[len(args.prompt) :] for x in decoded]
     return decoded

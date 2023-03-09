@@ -70,23 +70,26 @@ def tokenize_and_mask(text, span_length, pct, ceil_pct=False, concentration = No
     tokens = text.split(' ')
     if concentration == "FREQ":
         from nltk.corpus import stopwords
+        # print("start")
 
         stop_words = set(stopwords.words('english'))
         tokens = text.lower().split()
         idx = {}
+        # print('a')
         for i, token in enumerate(tokens):
             if token not in stop_words:
                 if token in idx:
                     idx[token].append(i)
                 else:
                     idx[token] = [i]
-
+        # print('b')
         idx = {token:idx[token] for token in idx if len(idx[token])>1}
         sorted_tokens = sorted(idx, key=lambda token:len(idx[token]), reverse=True)
 
         selected_list = []
         for token in sorted_tokens:
             selected_list.extend(np.random.choice(idx[token], size=len(idx[token])//2, replace=False))
+        # print("c")
 
     elif concentration is not None: # == "adj":
         doc = nlp(text)
@@ -681,6 +684,7 @@ if __name__ == '__main__':
     parser.add_argument('--random_fills_tokens', action='store_true', help = "use tokens to fill randomly")
     parser.add_argument('--cache_dir', type=str, default="cache", help = "where we store the models")
     parser.add_argument('--concentration', type=str, default=None, help = "How we pick the words to perturb. None is default")
+    parser.add_argument('--prompt', type=str, default=None, help = "Additional Prompt to Model")
     args = parser.parse_args()
     API_TOKEN_COUNTER = 0
     if args.openai_model is not None:
