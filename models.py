@@ -43,17 +43,33 @@ def load_base_model_and_tokenizer(name, args):
 
     return base_model, base_tokenizer
 
+def drop_last_word(text):
+    return ' '.join(text.split(' ')[:-1])
+
+def _openai_sample(arg_tuple):
+    p, args, openai = arg_tuple
+
+    if args.dataset != 'pubmed':  # keep Answer: prefix for pubmed
+        p = drop_last_word(p)
+
+    # sample from the openai model
+    kwargs = { "engine": args.openai_model, "max_tokens": 200 }
+    if args.do_top_p:
+        kwargs['top_p'] = args.top_p
+
+    r = openai.Completion.create(prompt=f"{p}", **kwargs)
+    return p + r['choices'][0].text
 
 
 # sample from base_model using ****only**** the first 30 tokens in each example as context
-def sample_from_model(texts, base_model, base_tokenizer, args, min_words=55, prompt_tokens=30):
+def sample_from_model(texts, base_model, base_tokenizer, args, min_words=55, prompt_tokens=30, openai = None):
     # encode each text as a list of token ids
     if args.dataset == 'pubmed':
         texts = [t[:t.index(custom_datasets.SEPARATOR)] for t in texts]
         all_encoded = base_tokenizer(texts, return_tensors="pt", padding=True).to(DEVICE)
     else:
         all_encoded = base_tokenizer(texts, return_tensors="pt", padding=True).to(DEVICE)
-        if len(args.prompt) > 0:
+        if args.prompt is not None:
             addl_prompt = base_tokenizer(args.prompt, return_tensors="pt", padding=True).to(DEVICE)
             batch_size = len(texts)
             stacked_prompt = {key : torch.tile(value, (batch_size, 1)) for key, value in addl_prompt.items()}
@@ -66,7 +82,8 @@ def sample_from_model(texts, base_model, base_tokenizer, args, min_words=55, pro
         prefixes = base_tokenizer.batch_decode(all_encoded['input_ids'], skip_special_tokens=True)
         pool = ThreadPool(args.batch_size)
 
-        decoded = pool.map(_openai_sample, prefixes)
+        arg_list = [(pf, args, openai) for pf in prefixes]
+        decoded = pool.map(_openai_sample, arg_list)
     else:
         decoded = ['' for _ in range(len(texts))]
 
@@ -88,12 +105,16 @@ def sample_from_model(texts, base_model, base_tokenizer, args, min_words=55, pro
             decoded = base_tokenizer.batch_decode(outputs, skip_special_tokens=True)
             tries += 1
 
-    if args.openai_model:
-        global API_TOKEN_COUNTER
-
-        # count total number of tokens with GPT2_TOKENIZER
-        total_tokens = sum(len(GPT2_TOKENIZER.encode(x)) for x in decoded)
-        API_TOKEN_COUNTER += total_tokens
-    if len(args.prompt) > 0: #strip prompt
+    # if args.openai_model:
+    #     global API_TOKEN_COUNTER
+    #
+    #     # count total number of tokens with GPT2_TOKENIZER
+    #     total_tokens = sum(len(GPT2_TOKENIZER.encode(x)) for x in decoded)
+    #     API_TOKEN_COUNTER += total_tokens
+    # import ipdb
+    # ipdb.set_trace()
+    import ipdb
+    ipdb.set_trace()
+    if args.prompt is not None: #strip prompt
         decoded = [x[len(args.prompt) :] for x in decoded]
     return decoded

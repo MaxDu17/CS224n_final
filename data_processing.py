@@ -21,7 +21,7 @@ from utils import strip_newlines, truncate_to_substring, trim_to_shorter_length
 from models import sample_from_model
 
 
-def generate_samples(raw_data, batch_size, base_model, base_tokenizer, args):
+def generate_samples(raw_data, batch_size, base_model, base_tokenizer, args, openai):
     """
     Takes the text, truncates it, and finishes it with the base model
     :param raw_data: list of strings (passages)
@@ -41,8 +41,8 @@ def generate_samples(raw_data, batch_size, base_model, base_tokenizer, args):
     for batch in range(len(raw_data) // batch_size):
         print('Generating samples for batch', batch, 'of', len(raw_data) // batch_size)
         original_text = raw_data[batch * batch_size:(batch + 1) * batch_size]
- 
-        sampled_text = sample_from_model(original_text, base_model, base_tokenizer, args, min_words=30 if args.dataset in ['pubmed'] else 55)
+
+        sampled_text = sample_from_model(original_text, base_model, base_tokenizer, args, min_words=30 if args.dataset in ['pubmed'] else 55, openai = openai)
 
         for o, s in zip(original_text, sampled_text):
             if args.dataset == 'pubmed':
@@ -64,7 +64,7 @@ def generate_samples(raw_data, batch_size, base_model, base_tokenizer, args):
     return data
 
 
-def generate_data(dataset, key, preproc_tokenizer, base_model, base_tokenizer, args):
+def generate_data(dataset, key, preproc_tokenizer, base_model, base_tokenizer, args, openai):
     """
     Loads datasetinto DetectGPT format
     :param dataset: name of dataset
@@ -112,4 +112,4 @@ def generate_data(dataset, key, preproc_tokenizer, base_model, base_tokenizer, a
     print(f"Average number of words: {np.mean([len(x.split()) for x in data])}")
 
     return generate_samples(data[:args.n_samples], base_model = base_model, base_tokenizer = base_tokenizer,
-                            batch_size=args.batch_size, args = args)
+                            batch_size=args.batch_size, args = args, openai = openai)

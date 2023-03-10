@@ -689,9 +689,12 @@ if __name__ == '__main__':
     API_TOKEN_COUNTER = 0
     if args.openai_model is not None:
         import openai
-
-        assert args.openai_key is not None, "Must provide OpenAI API key as --openai_key"
-        openai.api_key = args.openai_key
+        if args.openai_key is None:
+            with open("secretkey.txt") as f:
+                openai.api_key = f.readline().strip()
+        else:
+            # assert args.openai_key is not None, "Must provide OpenAI API key as --openai_key"
+            openai.api_key = args.openai_key
 
     START_DATE = datetime.datetime.now().strftime('%Y-%m-%d')
     START_TIME = datetime.datetime.now().strftime('%H-%M-%S-%f')
@@ -762,7 +765,10 @@ if __name__ == '__main__':
     move_base_model_to_gpu()
 
     print(f'Loading dataset {args.dataset}...')
-    data = generate_data(args.dataset, args.dataset_key, preproc_tokenizer, base_model, base_tokenizer, args)
+    if args.openai_model is not None:
+        data = generate_data(args.dataset, args.dataset_key, preproc_tokenizer, base_model, base_tokenizer, args, openai)
+    else:
+        data = generate_data(args.dataset, args.dataset_key, preproc_tokenizer, base_model, base_tokenizer, args, None)
 
     if args.random_fills:
         FILL_DICTIONARY = set()

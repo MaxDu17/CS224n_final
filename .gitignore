@@ -7,3 +7,5 @@ clusterlogs/
 __pycache__/
 .vscode/
 .idea/
+secretkey.txt
+data/
