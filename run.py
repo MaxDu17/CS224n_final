@@ -667,9 +667,16 @@ if __name__ == '__main__':
     parser.add_argument('--cache_dir', type=str, default="cache", help = "where we store the models")
     parser.add_argument('--concentration', type=str, default=None, help = "How we pick the words to perturb. None is default")
     parser.add_argument('--prompt', type=str, default=None, help = "Additional Prompt to Model")
+    parser.add_argument('--chatgpt', action='store_true', help = "Use ChatGPT for sample generation")
+    parser.add_argument('--chatgpt_preset', type=str, default="You are a helpful assistant.", help = "preset system context for ChatGPT")
+    parser.add_argument('--chatgpt_temperature', type=float, default=0.0, help = "ChatGPT temperature")
+    parser.add_argument('--chatgpt_top_p', type=float, default=0.0, help = "ChatGPT top-p")
+    parser.add_argument('--chatgpt_frequency_penalty', type=float, default=0.0, help = "ChatGPT frequency penalty")
+    parser.add_argument('--chatgpt_presence-penalty', type=float, default=0.0, help = "ChatGPT presence penalty")
+
     args = parser.parse_args()
     API_TOKEN_COUNTER = 0
-    if args.openai_model is not None:
+    if args.openai_model is not None or args.chatgpt:
         import openai
         if args.openai_key is None:
             with open("secretkey.txt") as f:
