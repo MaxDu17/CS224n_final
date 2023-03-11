@@ -29,6 +29,9 @@ pattern = re.compile(r"<extra_id_\d+>")
 import stanza
 nlp = stanza.Pipeline(lang='en', processors='tokenize,mwt,pos')
 
+from nltk.corpus import stopwords
+stop_words = set(stopwords.words('english'))
+        
 def move_base_model_to_gpu():
     print('MOVING BASE MODEL TO GPU...', end='', flush=True)
     start = time.time()
@@ -51,9 +54,6 @@ def move_mask_model_to_gpu():
         mask_model.to(DEVICE)
     print(f'DONE ({time.time() - start:.2f}s)')
 
-#KEY
-
-
 
 def tokenize_and_mask(text, span_length, pct, ceil_pct=False, concentration = None):
     """
@@ -64,34 +64,32 @@ def tokenize_and_mask(text, span_length, pct, ceil_pct=False, concentration = No
     :param ceil_pct:
     :return: masked text
     """
-    #TODO: make this better structured
-
-
     tokens = text.split(' ')
-    if concentration == "FREQ":
-        from nltk.corpus import stopwords
-        # print("start")
-
-        stop_words = set(stopwords.words('english'))
+    if concentration in ["FREQ", "STOP", "NONSTOP"]:
         tokens = text.lower().split()
-        idx = {}
-        # print('a')
-        for i, token in enumerate(tokens):
-            if token not in stop_words:
-                if token in idx:
-                    idx[token].append(i)
-                else:
-                    idx[token] = [i]
-        # print('b')
-        idx = {token:idx[token] for token in idx if len(idx[token])>1}
-        sorted_tokens = sorted(idx, key=lambda token:len(idx[token]), reverse=True)
+        if concentration == "FREQ":
+            # Selectively masks most frequent non-stop words
+            idx = {}
+            for i, token in enumerate(tokens):
+                if token not in stop_words:
+                    if token in idx:
+                        idx[token].append(i)
+                    else:
+                        idx[token] = [i]
+            idx = {token:idx[token] for token in idx if len(idx[token])>1}
+            sorted_tokens = sorted(idx, key=lambda token:len(idx[token]), reverse=True)
+            selected_list = []
+            for token in sorted_tokens:
+                selected_list.extend(np.random.choice(idx[token], size=len(idx[token])//2, replace=False))      
+        elif concentration == "STOP":
+            # Selectively masks stop words
+            selected_list = [i for i, token in enumerate(tokens) if token in stop_words]
+        else:
+            # Selectively masks non-stop words
+            selected_list = [i for i, token in enumerate(tokens) if token not in stop_words]
 
-        selected_list = []
-        for token in sorted_tokens:
-            selected_list.extend(np.random.choice(idx[token], size=len(idx[token])//2, replace=False))
-        # print("c")
-
-    elif concentration is not None: # == "adj":
+    elif concentration in ["ALL", "ADJ", "NOUN", "VERB", "PROPN"]:
+        # Selectively masks according to part-of-speech
         doc = nlp(text)
         if concentration == "ALL":
             relevant_words = set(
@@ -103,26 +101,10 @@ def tokenize_and_mask(text, span_length, pct, ceil_pct=False, concentration = No
             for relevant in relevant_words:
                 if relevant in token:
                     selected_list.append(i)
-                    # print(token)
                     break
-        # import ipdb
-        # ipdb.set_trace()
-
-        #
-        # from nltk.corpus import wordnet as wn
-        #
-        # adj_list = []
-        # tokens = tokens[:-span_length] #chopping off the end to prevent over-sampling
-        # for i, w in enumerate(tokens):
-        #     # tmp = wn.synsets(w)[0].pos()
-        #     pos_l = set()
-        #     for tmp in wn.synsets(w):
-        #         if tmp.name().split('.')[0] == w:
-        #             pos_l.add(tmp.pos())
-        #     if "a" in pos_l or "s" in pos_l:
-        #         adj_list.append(i)
-        # print(w, ":", pos_l)
-
+    
+    elif concentration is not None:
+        raise ValueError("Concentration not supported")
 
     mask_string = '<<<mask>>>'
 
