@@ -16,6 +16,8 @@ import functools
 import custom_datasets
 from multiprocessing.pool import ThreadPool
 import time
+import openai
+
 
 DEVICE = "cuda"
 
@@ -60,9 +62,42 @@ def _openai_sample(arg_tuple):
     r = openai.Completion.create(prompt=f"{p}", **kwargs)
     return p + r['choices'][0].text
 
+def chatgpt_generate(prompt, args, openai, max_tokens=150):
+    responses = openai.ChatCompletion.create(
+    model="gpt-3.5-turbo",
+    messages=[
+            {"role": "system", "content": args.chatgpt_preset},
+            {"role": "user", "content": prompt},
+        ],
+    max_tokens = max_tokens,
+    presence_penalty = args.chatgpt_presence_penalty,
+    frequency_penalty = args.chatgpt_frequency_penalty,
+    temperature= args.chatgpt_temperature,
+    top_p=args.chatgpt_top_p,
+    )
+
+    response = responses['choices'][0]['message']['content']
+    token_usage = responses['usage']['total_tokens']
+    return response, token_usage
+
+def sample_from_chatGPT(texts, args, surrogate_tokenizer, min_words=55, prompt_tokens=30, openai=None):
+    global API_TOKEN_COUNTER    
+    if args.dataset == 'pubmed':
+        texts = [(t[:t.index(custom_datasets.SEPARATOR)], args) for t in texts]
+    else:
+        tokenized = surrogate_tokenizer(texts)
+        prefix = [''.join(surrogate_tokenizer.decode(ids[:prompt_tokens])) for ids in tokenized['input_ids']]
+        texts = [(args.prompt + f'complete the text with at least {min_words} words' + t, args, openai) for t in prefix]
+
+    pool = ThreadPool(args.batch_size)
+    results = pool.starmap(chatgpt_generate, texts)
+    decoded, tokens_used = map(list, zip(*results))
+    API_TOKEN_COUNTER += sum(tokens_used)
+    decoded = [pre + samp for pre, samp in zip(prefix, decoded)]
+    return decoded
 
 # sample from base_model using ****only**** the first 30 tokens in each example as context
-def sample_from_model(texts, base_model, base_tokenizer, args, min_words=55, prompt_tokens=30, openai = None):
+def sample_from_model(texts, base_model, base_tokenizer, args, min_words=55, prompt_tokens=30, openai=None):
     # encode each text as a list of token ids
     if args.dataset == 'pubmed':
         texts = [t[:t.index(custom_datasets.SEPARATOR)] for t in texts]

@@ -18,7 +18,7 @@ from multiprocessing.pool import ThreadPool
 import time
 
 from utils import strip_newlines, truncate_to_substring, trim_to_shorter_length
-from models import sample_from_model
+from models import sample_from_model, sample_from_chatGPT
 
 
 def generate_samples(raw_data, batch_size, base_model, base_tokenizer, args, openai):
@@ -42,7 +42,10 @@ def generate_samples(raw_data, batch_size, base_model, base_tokenizer, args, ope
         print('Generating samples for batch', batch, 'of', len(raw_data) // batch_size)
         original_text = raw_data[batch * batch_size:(batch + 1) * batch_size]
 
-        sampled_text = sample_from_model(original_text, base_model, base_tokenizer, args, min_words=30 if args.dataset in ['pubmed'] else 55, openai = openai)
+        if args.chatgpt:
+            sampled_text = sample_from_chatGPT(original_text, args, base_tokenizer, min_words=30 if args.dataset in ['pubmed'] else 55, openai=openai)
+        else:
+            sampled_text = sample_from_model(original_text, base_model, base_tokenizer, args, min_words=30 if args.dataset in ['pubmed'] else 55, openai=openai)
 
         for o, s in zip(original_text, sampled_text):
             if args.dataset == 'pubmed':
