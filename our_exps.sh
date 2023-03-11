@@ -8,6 +8,16 @@
 #--n_perturbation_list 5 --n_samples 150 --pct_words_masked 0.3 --span_length 2 \
 #--dataset squad --dataset_key context --skip_baselines --concentration "FREQ"
 
+## TESTING CHATGPT
+# JUST TESTING; WILL USE A SMALLER MODEL LATER
+python run.py --output_name chatgpt --batch_size 5 \
+--chatgpt --mask_filling_model_name t5-3b \
+--scoring_model EleutherAI/gpt-j-6B \
+--n_perturbation_list 5,10,20 --n_samples 100 \
+--pct_words_masked 0.3 --span_length 2 \
+--dataset writing --skip_baselines
+exit
+
 
 ### TESTING GPT-J
 python run.py --output_name vanilla --scoring_model gpt2-medium \

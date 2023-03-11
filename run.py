@@ -31,7 +31,7 @@ nlp = stanza.Pipeline(lang='en', processors='tokenize,mwt,pos')
 
 from nltk.corpus import stopwords
 stop_words = set(stopwords.words('english'))
-        
+
 def move_base_model_to_gpu():
     print('MOVING BASE MODEL TO GPU...', end='', flush=True)
     start = time.time()
@@ -80,7 +80,7 @@ def tokenize_and_mask(text, span_length, pct, ceil_pct=False, concentration = No
             sorted_tokens = sorted(idx, key=lambda token:len(idx[token]), reverse=True)
             selected_list = []
             for token in sorted_tokens:
-                selected_list.extend(np.random.choice(idx[token], size=len(idx[token])//2, replace=False))      
+                selected_list.extend(np.random.choice(idx[token], size=len(idx[token])//2, replace=False))
         elif concentration == "STOP":
             # Selectively masks stop words
             selected_list = [i for i, token in enumerate(tokens) if token in stop_words]
@@ -102,7 +102,7 @@ def tokenize_and_mask(text, span_length, pct, ceil_pct=False, concentration = No
                 if relevant in token:
                     selected_list.append(i)
                     break
-    
+
     elif concentration is not None:
         raise ValueError("Concentration not supported")
 
@@ -754,7 +754,8 @@ if __name__ == '__main__':
     move_base_model_to_gpu()
 
     print(f'Loading dataset {args.dataset}...')
-    if args.openai_model is not None:
+    if args.openai_model is not None or args.chatgpt:
+        print("USING OPENAI")
         data = generate_data(args.dataset, args.dataset_key, preproc_tokenizer, base_model, base_tokenizer, args, openai)
     else:
         data = generate_data(args.dataset, args.dataset_key, preproc_tokenizer, base_model, base_tokenizer, args, None)
@@ -848,7 +849,7 @@ if __name__ == '__main__':
     if not os.path.exists(os.path.dirname(new_folder)):
         os.makedirs(os.path.dirname(new_folder))
     os.rename(SAVE_FOLDER, new_folder)
-    
+
 
 
     print(f"Used an *estimated* {API_TOKEN_COUNTER} API tokens (may be inaccurate)")

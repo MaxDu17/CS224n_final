@@ -81,19 +81,26 @@ def chatgpt_generate(prompt, args, openai, max_tokens=150):
     return response, token_usage
 
 def sample_from_chatGPT(texts, args, surrogate_tokenizer, min_words=55, prompt_tokens=30, openai=None):
-    global API_TOKEN_COUNTER    
     if args.dataset == 'pubmed':
         texts = [(t[:t.index(custom_datasets.SEPARATOR)], args) for t in texts]
     else:
         tokenized = surrogate_tokenizer(texts)
         prefix = [''.join(surrogate_tokenizer.decode(ids[:prompt_tokens])) for ids in tokenized['input_ids']]
-        texts = [(args.prompt + f'complete the text with at least {min_words} words' + t, args, openai) for t in prefix]
+
+        if args.prompt is not None:
+            texts = [(args.prompt + f'complete the text with at least {min_words} words: ' + t, args, openai) for t in prefix]
+        else:
+            texts = [(f'complete the text with at least {min_words} words: ' + t, args, openai) for t in prefix]
+
 
     pool = ThreadPool(args.batch_size)
     results = pool.starmap(chatgpt_generate, texts)
     decoded, tokens_used = map(list, zip(*results))
-    API_TOKEN_COUNTER += sum(tokens_used)
+    # API_TOKEN_COUNTER += sum(tokens_used)
+
     decoded = [pre + samp for pre, samp in zip(prefix, decoded)]
+    if args.prompt is not None: #strip prompt
+        decoded = [x[len(args.prompt) :] for x in decoded]
     return decoded
 
 # sample from base_model using ****only**** the first 30 tokens in each example as context
@@ -104,13 +111,14 @@ def sample_from_model(texts, base_model, base_tokenizer, args, min_words=55, pro
         all_encoded = base_tokenizer(texts, return_tensors="pt", padding=True).to(DEVICE)
     else:
         all_encoded = base_tokenizer(texts, return_tensors="pt", padding=True).to(DEVICE)
-        if args.prompt is not None:
-            addl_prompt = base_tokenizer(args.prompt, return_tensors="pt", padding=True).to(DEVICE)
-            batch_size = len(texts)
-            stacked_prompt = {key : torch.tile(value, (batch_size, 1)) for key, value in addl_prompt.items()}
-            all_encoded = {key: torch.cat((stacked_prompt[key],value[:, :prompt_tokens]), dim = 1) for key, value in all_encoded.items()}
-        else:
-            all_encoded = {key: value[:, :prompt_tokens] for key, value in all_encoded.items()}
+
+    if args.prompt is not None:
+        addl_prompt = base_tokenizer(args.prompt, return_tensors="pt", padding=True).to(DEVICE)
+        batch_size = len(texts)
+        stacked_prompt = {key : torch.tile(value, (batch_size, 1)) for key, value in addl_prompt.items()}
+        all_encoded = {key: torch.cat((stacked_prompt[key],value[:, :prompt_tokens]), dim = 1) for key, value in all_encoded.items()}
+    else:
+        all_encoded = {key: value[:, :prompt_tokens] for key, value in all_encoded.items()}
 
     if args.openai_model:
         # decode the prefixes back into text
@@ -146,8 +154,6 @@ def sample_from_model(texts, base_model, base_tokenizer, args, min_words=55, pro
     #     # count total number of tokens with GPT2_TOKENIZER
     #     total_tokens = sum(len(GPT2_TOKENIZER.encode(x)) for x in decoded)
     #     API_TOKEN_COUNTER += total_tokens
-    # import ipdb
-    # ipdb.set_trace()
     if args.prompt is not None: #strip prompt
         decoded = [x[len(args.prompt) :] for x in decoded]
     return decoded

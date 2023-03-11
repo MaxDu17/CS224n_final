@@ -41,7 +41,6 @@ def generate_samples(raw_data, batch_size, base_model, base_tokenizer, args, ope
     for batch in range(len(raw_data) // batch_size):
         print('Generating samples for batch', batch, 'of', len(raw_data) // batch_size)
         original_text = raw_data[batch * batch_size:(batch + 1) * batch_size]
-
         if args.chatgpt:
             sampled_text = sample_from_chatGPT(original_text, args, base_tokenizer, min_words=30 if args.dataset in ['pubmed'] else 55, openai=openai)
         else:
