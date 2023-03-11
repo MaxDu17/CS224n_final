@@ -62,7 +62,7 @@ def _openai_sample(arg_tuple):
     r = openai.Completion.create(prompt=f"{p}", **kwargs)
     return p + r['choices'][0].text
 
-def chatgpt_generate(prompt, args, max_tokens=150):
+def chatgpt_generate(prompt, args, openai, max_tokens=150):
     responses = openai.ChatCompletion.create(
     model="gpt-3.5-turbo",
     messages=[
@@ -80,14 +80,14 @@ def chatgpt_generate(prompt, args, max_tokens=150):
     token_usage = responses['usage']['total_tokens']
     return response, token_usage
 
-def sample_from_chatGPT(texts, args, surrogate_tokenizer, min_words=55, prompt_tokens=30):
+def sample_from_chatGPT(texts, args, surrogate_tokenizer, min_words=55, prompt_tokens=30, openai=None):
     global API_TOKEN_COUNTER    
     if args.dataset == 'pubmed':
         texts = [(t[:t.index(custom_datasets.SEPARATOR)], args) for t in texts]
     else:
         tokenized = surrogate_tokenizer(texts)
         prefix = [''.join(surrogate_tokenizer.decode(ids[:prompt_tokens])) for ids in tokenized['input_ids']]
-        texts = [(args.prompt + f'complete the text with at least {min_words} words' + t, args) for t in prefix]
+        texts = [(args.prompt + f'complete the text with at least {min_words} words' + t, args, openai) for t in prefix]
 
     pool = ThreadPool(args.batch_size)
     results = pool.starmap(chatgpt_generate, texts)
@@ -97,7 +97,7 @@ def sample_from_chatGPT(texts, args, surrogate_tokenizer, min_words=55, prompt_t
     return decoded
 
 # sample from base_model using ****only**** the first 30 tokens in each example as context
-def sample_from_model(texts, base_model, base_tokenizer, args, min_words=55, prompt_tokens=30, openai = None):
+def sample_from_model(texts, base_model, base_tokenizer, args, min_words=55, prompt_tokens=30, openai=None):
     # encode each text as a list of token ids
     if args.dataset == 'pubmed':
         texts = [t[:t.index(custom_datasets.SEPARATOR)] for t in texts]
