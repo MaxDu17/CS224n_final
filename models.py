@@ -113,8 +113,6 @@ def sample_from_model(texts, base_model, base_tokenizer, args, min_words=55, pro
     #     API_TOKEN_COUNTER += total_tokens
     # import ipdb
     # ipdb.set_trace()
-    import ipdb
-    ipdb.set_trace()
     if args.prompt is not None: #strip prompt
         decoded = [x[len(args.prompt) :] for x in decoded]
     return decoded
