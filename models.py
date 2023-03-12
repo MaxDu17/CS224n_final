@@ -24,7 +24,7 @@ DEVICE = "cuda"
 
 def load_base_model_and_tokenizer(name, args):
     if args.openai_model is None:
-        print(f'Loading BASE model {args.base_model_name}...')
+        print(f'Loading BASE model {name}...')
         base_model_kwargs = {}
         if 'gpt-j' in name or 'neox' in name:
             base_model_kwargs.update(dict(torch_dtype=torch.float16))

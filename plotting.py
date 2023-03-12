@@ -36,7 +36,13 @@ def save_roc_curves(experiments, SAVE_FOLDER, args):
     plt.ylim([0.0, 1.05])
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
-    plt.title(f'ROC Curves ({args.base_model_name} - {args.mask_filling_model_name})')
+    if args.chatgpt:
+        TITLE = f'ROC Curves ({ChatGPT} - {args.scoring_model_name} - {args.mask_filling_model_name})'
+    elif args.scoring_model_name:
+        TITLE = f'ROC Curves ({args.base_model_name} - {args.scoring_model_name} - {args.mask_filling_model_name})'
+    else:
+        TITLE = f'ROC Curves ({args.scoring_model_name} - {args.mask_filling_model_name})'
+    plt.title(TITLE)
     plt.legend(loc="lower right", fontsize=6)
     plt.savefig(f"{SAVE_FOLDER}/roc_curves.png")
 

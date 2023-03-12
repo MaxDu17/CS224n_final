@@ -33,7 +33,7 @@ from nltk.corpus import stopwords
 stop_words = set(stopwords.words('english'))
 
 def move_base_model_to_gpu():
-    print('MOVING BASE MODEL TO GPU...', end='', flush=True)
+    print('MOVING BASE (or scoring) MODEL TO GPU...', end='', flush=True)
     start = time.time()
 
     if mask_model is not None:
@@ -658,7 +658,7 @@ if __name__ == '__main__':
     parser.add_argument('--openai_key', type=str, help = "api key for accessing openai models")
     parser.add_argument('--baselines_only', action='store_true', help = "use this if you only want to run baselines")
     parser.add_argument('--skip_baselines', action='store_true', help = "use this if you only want to run DetectGPT")
-    parser.add_argument('--buffer_size', type=int, default=1) #what does this do?
+    parser.add_argument('--buffer_size', type=int, default=1, help = "area between masks")
     parser.add_argument('--mask_top_p', type=float, default=1.0, help = "top-p parameter for the perturbation model")
     parser.add_argument('--pre_perturb_pct', type=float, default=0.0, help = "perturbs text before running; used for ablations")
     parser.add_argument('--pre_perturb_span_length', type=int, default=5, help = "pre-perturbation parameters")
@@ -675,6 +675,8 @@ if __name__ == '__main__':
     parser.add_argument('--chatgpt_presence-penalty', type=float, default=0.0, help = "ChatGPT presence penalty")
 
     args = parser.parse_args()
+
+    assert not args.chatgpt or args.scoring_model_name #chatgpt can't do likelihoods, so it must be scored by a different model
     API_TOKEN_COUNTER = 0
     if args.openai_model is not None or args.chatgpt:
         import openai
