@@ -96,12 +96,26 @@ def tokenize_and_mask(text, span_length, pct, ceil_pct=False, concentration = No
                 [word.text for sent in doc.sentences for word in sent.words if word.upos in ["ADJ", "NOUN", "VERB"]])
         else:
             relevant_words = set([word.text for sent in doc.sentences for word in sent.words if word.upos == concentration])
-        selected_list = list()
-        for i, token in enumerate(tokens):
-            for relevant in relevant_words:
-                if relevant in token:
-                    selected_list.append(i)
-                    break
+
+        selected_list = [i for i, token in enumerate(tokens) if token in relevant_words]
+        
+    elif '+' in concentration:
+        assert len(concentration.split('+')) == 2, '2 POS only'
+        first, second = concentration.split('+')
+        POS = ['ADJ', 'NOUN', 'VERB', 'ADV', 'PROPN']
+        assert first in POS and second in POS, 'POS must be one of ["ADJ","NOUN", "VERB", "ADV", "PROPN"]'
+        doc = nlp(text)
+        relevant_words_first = set([word.text for sent in doc.sentences for word in sent.words if word.upos == first])
+        relevant_words_second = set([word.text for sent in doc.sentences for word in sent.words if word.upos == second])
+        selected_list = []
+        for i in range(len(tokens) - 1):
+            if tokens[i] in relevant_words_first and tokens[i+1] in relevant_words_second:
+              selected_list.append(i)
+
+        selected_list = [i for i, token in enumerate(tokens[:-1]) if (token in relevant_words_first and tokens[i+1] in relevant_words_second)]
+    
+        if (first, second) == ("ADV", "VERB") or (second, first) == ("ADV", "VERB"):
+          selected_list += [i for i, token in enumerate(tokens[:-1]) if (token in relevant_words_second and tokens[i+1] in relevant_words_first)]
 
     elif concentration is not None:
         raise ValueError("Concentration not supported")
