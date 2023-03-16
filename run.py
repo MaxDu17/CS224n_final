@@ -242,7 +242,7 @@ def perturb_texts_(texts, span_length, pct, ceil_pct=False):
     if not args.random_fills:
         # print("HERE HERE HERE")
 
-        masked_texts = [tokenize_and_mask(x, span_length, pct, ceil_pct, args.concentration) for x in texts]
+        masked_texts = [tokenize_and_mask(x, span_length, pct, ceil_pct, concentration=args.concentration) for x in texts]
         # print("a")
         raw_fills = replace_masks(masked_texts)
         # print("b")
