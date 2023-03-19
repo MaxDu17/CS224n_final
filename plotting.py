@@ -37,7 +37,7 @@ def save_roc_curves(experiments, SAVE_FOLDER, args):
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
     if args.chatgpt:
-        TITLE = f'ROC Curves ({ChatGPT} - {args.scoring_model_name} - {args.mask_filling_model_name})'
+        TITLE = f'ROC Curves (ChatGPT - {args.scoring_model_name} - {args.mask_filling_model_name})'
     elif args.scoring_model_name:
         TITLE = f'ROC Curves ({args.base_model_name} - {args.scoring_model_name} - {args.mask_filling_model_name})'
     else:

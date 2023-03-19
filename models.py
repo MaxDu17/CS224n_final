@@ -87,11 +87,11 @@ def sample_from_chatGPT(texts, args, surrogate_tokenizer, min_words=55, prompt_t
         tokenized = surrogate_tokenizer(texts)
         prefix = [''.join(surrogate_tokenizer.decode(ids[:prompt_tokens])) for ids in tokenized['input_ids']]
 
-        if args.prompt is not None:
-            texts = [(args.prompt + f'complete the text with at least {min_words} words: ' + t, args, openai) for t in prefix]
-        else:
-            texts = [(f'complete the text with at least {min_words} words: ' + t, args, openai) for t in prefix]
 
+        if args.prompt is not None:
+            texts = [(args.prompt + t, args, openai) for t in prefix]
+        else:
+            texts = [(f'Complete this story with at least {min_words} words: ' + t, args, openai) for t in prefix]
 
     pool = ThreadPool(args.batch_size)
     results = pool.starmap(chatgpt_generate, texts)
@@ -99,8 +99,6 @@ def sample_from_chatGPT(texts, args, surrogate_tokenizer, min_words=55, prompt_t
     # API_TOKEN_COUNTER += sum(tokens_used)
 
     decoded = [pre + samp for pre, samp in zip(prefix, decoded)]
-    if args.prompt is not None: #strip prompt
-        decoded = [x[len(args.prompt) :] for x in decoded]
     return decoded
 
 # sample from base_model using ****only**** the first 30 tokens in each example as context

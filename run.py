@@ -675,8 +675,7 @@ if __name__ == '__main__':
     parser.add_argument('--chatgpt_presence-penalty', type=float, default=0.0, help = "ChatGPT presence penalty")
 
     args = parser.parse_args()
-
-    assert not args.chatgpt or args.scoring_model_name #chatgpt can't do likelihoods, so it must be scored by a different model
+    assert not args.chatgpt or args.scoring_model_name or args.openai_model #chatgpt can't do likelihoods, so it must be scored by a different model
     API_TOKEN_COUNTER = 0
     if args.openai_model is not None or args.chatgpt:
         import openai
@@ -727,6 +726,7 @@ if __name__ == '__main__':
     GPT2_TOKENIZER = transformers.GPT2Tokenizer.from_pretrained('gpt2', cache_dir=cache_dir)
 
     # generic generative model
+    print(args.base_model_name)
     base_model, base_tokenizer = load_base_model_and_tokenizer(args.base_model_name, args)
     mask_model = None
     # mask filling t5 model
@@ -757,7 +757,10 @@ if __name__ == '__main__':
 
     print(f'Loading dataset {args.dataset}...')
     if args.openai_model is not None or args.chatgpt:
-        print("USING OPENAI")
+        print("USING OPENAI. IGNORING BASE MODEL")
+        if args.chatgpt:
+            print("IGNORING BASE MODEL AND USING CHATGPT TO GENERATE")
+        # if chatgpt flag is enabled, we IGNORE the base model during generation
         data = generate_data(args.dataset, args.dataset_key, preproc_tokenizer, base_model, base_tokenizer, args, openai)
     else:
         data = generate_data(args.dataset, args.dataset_key, preproc_tokenizer, base_model, base_tokenizer, args, None)
